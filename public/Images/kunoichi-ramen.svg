@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090b"/>
+      <stop offset="50%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="bowlGlow" cx="50%" cy="60%" r="40%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1100" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Texture Grid -->
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="60" y1="0" x2="60" y2="1100"/>
+    <line x1="740" y1="0" x2="740" y2="1100"/>
+    <line x1="0" y1="100" x2="800" y2="100"/>
+    <line x1="0" y1="1000" x2="800" y2="1000"/>
+  </g>
+
+  <!-- Ambient Glow -->
+  <circle cx="400" cy="550" r="320" fill="url(#bowlGlow)"/>
+
+  <!-- Top Header Frame -->
+  <text x="70" y="80" font-family="'Space Grotesk', sans-serif" font-size="14" font-weight="700" fill="#a1a1aa" letter-spacing="4">KUNOICHI JAPANESE RESTAURANT</text>
+  <text x="730" y="80" font-family="'Space Grotesk', sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="end" letter-spacing="2">MERCURE KARAWANG</text>
+
+  <!-- Main Headline -->
+  <text x="400" y="180" font-family="'Cinzel', serif, 'Playfair Display'" font-size="64" font-weight="900" fill="#71717a" text-anchor="middle" letter-spacing="12">ALL ABOUT</text>
+  <text x="400" y="260" font-family="'Cinzel', serif, 'Playfair Display'" font-size="96" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="8">RAMEN</text>
+  
+  <text x="400" y="305" font-family="'Inter', sans-serif" font-size="16" font-weight="500" fill="#a1a1aa" text-anchor="middle" letter-spacing="6">SPECIAL SET MENU CAMPAIGN</text>
+
+  <!-- Japanese Kanji Side Art -->
+  <text x="100" y="480" font-family="sans-serif" font-size="72" font-weight="900" fill="#ffffff" fill-opacity="0.1" text-anchor="middle">ラーメン</text>
+
+  <!-- Graphic Ramen Bowl Artwork (Monochrome Noir) -->
+  <g transform="translate(400, 580)">
+    <!-- Steam Lines -->
+    <path d="M-60,-160 Q-40,-210 -70,-260" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+    <path d="M0,-170 Q20,-220 -10,-270" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+    <path d="M60,-160 Q80,-210 50,-260" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Bowl Shadow -->
+    <ellipse cx="0" cy="180" rx="220" ry="30" fill="#000000" opacity="0.9"/>
+    
+    <!-- Bowl Outer -->
+    <path d="M-220,0 C-200,160 200,160 220,0 Z" fill="#18181b" stroke="#ffffff" stroke-width="4"/>
+    <path d="M-210,10 C-190,140 190,140 210,10 Z" fill="#09090b"/>
+
+    <!-- Dark Rich Broth -->
+    <ellipse cx="0" cy="0" rx="210" ry="60" fill="#27272a"/>
+    <ellipse cx="0" cy="-5" rx="190" ry="50" fill="#18181b"/>
+    
+    <!-- Ramen Toppings -->
+    <rect x="-140" y="-80" width="50" height="70" rx="4" fill="#09090b" stroke="#3f3f46" stroke-width="2" transform="rotate(-15 -140 -80)"/>
+    
+    <!-- Egg halves (Monochrome) -->
+    <circle cx="60" cy="-10" r="30" fill="#ffffff"/>
+    <circle cx="60" cy="-10" r="18" fill="#18181b"/>
+
+    <!-- Chashu pork slices -->
+    <ellipse cx="-40" cy="10" rx="45" ry="30" fill="#3f3f46" stroke="#ffffff" stroke-width="2"/>
+    <ellipse cx="20" cy="20" rx="45" ry="28" fill="#27272a" stroke="#ffffff" stroke-width="2"/>
+
+    <!-- Chopsticks -->
+    <line x1="-180" y1="-180" x2="160" y2="40" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+    <line x1="-160" y1="-190" x2="170" y2="25" stroke="#71717a" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Price Badge Ribbon (Strict Black & White) -->
+  <g transform="translate(400, 840)">
+    <rect x="-160" y="-30" width="320" height="60" rx="30" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="8" font-family="'Space Grotesk', sans-serif" font-size="24" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="2">IDR 150.000++</text>
+  </g>
+
+  <!-- Footer Specs Box -->
+  <g transform="translate(400, 970)">
+    <rect x="-320" y="-40" width="640" height="70" rx="16" fill="#09090b" stroke="#27272a" stroke-width="1.5"/>
+    <text x="0" y="-12" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#a1a1aa" text-anchor="middle">INCLUDES CHOICE OF RAMEN, NIGHT DISH, MISO SOUP, KAKIGORI &amp; OCHA</text>
+    <text x="0" y="16" font-family="'Space Grotesk', sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="3">DIGITAL POSTER PROMOTION // MERCURE KARAWANG</text>
+  </g>
+</svg>
