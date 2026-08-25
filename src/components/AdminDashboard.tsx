@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePortfolio } from '@/context/PortfolioContext';
 import { Project, CATEGORIES } from '@/data/portfolioData';
 import { getYouTubeId } from '@/utils/youtube';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
   Plus,
   Trash2,
@@ -24,10 +25,46 @@ import {
   Dices,
   Eye,
   EyeOff,
-  Video as VideoIcon
+  Video as VideoIcon,
+  Cloud,
+  HardDrive
 } from 'lucide-react';
 
-// Helper to compress/process file to base64 DataURL
+// Helper to upload file to Supabase Storage bucket with Base64 fallback
+async function uploadFileToMediaStorage(file: File): Promise<string> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('portfolio-media')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (!error && data) {
+        const { data: publicData } = supabase.storage
+          .from('portfolio-media')
+          .getPublicUrl(filePath);
+
+        if (publicData?.publicUrl) {
+          return publicData.publicUrl;
+        }
+      } else {
+        console.warn('Supabase storage upload failed, using base64 fallback:', error);
+      }
+    } catch (e) {
+      console.warn('Supabase storage error, using base64 fallback:', e);
+    }
+  }
+
+  return readFileAsDataURL(file);
+}
+
+// Helper to compress/process file to base64 DataURL fallback
 function readFileAsDataURL(file: File): Promise<string> {
   return new Promise((resolve) => {
     if (file.type.startsWith('video/')) {
@@ -81,7 +118,7 @@ function readFileAsDataURL(file: File): Promise<string> {
 }
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
-  const { projects, addProject, updateProject, deleteProject, resetToDefault } = usePortfolio();
+  const { projects, addProject, updateProject, deleteProject, resetToDefault, isCloudSynced } = usePortfolio();
 
   // Mode Tab State: 'selected' | 'mercure' | 'cuecorner' | 'gallery'
   const [activeTab, setActiveTab] = useState<'selected' | 'mercure' | 'cuecorner' | 'gallery'>('selected');
@@ -158,7 +195,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const dataUrl = await readFileAsDataURL(file);
+      const dataUrl = await uploadFileToMediaStorage(file);
 
       addProject({
         title: file.name.replace(/\.[^/.]+$/, ''),
@@ -216,7 +253,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const handleFileChangeModal = async (file: File) => {
     if (!file) return;
-    const dataUrl = await readFileAsDataURL(file);
+    const dataUrl = await uploadFileToMediaStorage(file);
     setFormData((prev) => ({
       ...prev,
       image: dataUrl
@@ -291,6 +328,15 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold">
                   ADMIN DASHBOARD
                 </span>
+                {isCloudSynced ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold flex items-center gap-1">
+                    <Cloud className="w-3 h-3 text-emerald-400" /> SUPABASE CLOUD ACTIVE
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 text-[10px] font-mono font-bold flex items-center gap-1" title="Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable Cloud Sync">
+                    <HardDrive className="w-3 h-3 text-zinc-400" /> LOCAL BACKUP MODE
+                  </span>
+                )}
               </div>
               <h1 className="text-2xl font-bold text-white tracking-wide font-serif">
                 Bayu Setiaji Media Studio Manager

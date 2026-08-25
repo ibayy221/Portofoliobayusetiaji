@@ -2,13 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PROJECTS as INITIAL_PROJECTS, Project } from '@/data/portfolioData';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface PortfolioContextType {
   projects: Project[];
-  addProject: (project: Omit<Project, 'id'>) => void;
-  updateProject: (id: string, updated: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
+  addProject: (project: Omit<Project, 'id'>) => Promise<void> | void;
+  updateProject: (id: string, updated: Partial<Project>) => Promise<void> | void;
+  deleteProject: (id: string) => Promise<void> | void;
   resetToDefault: () => void;
+  isCloudSynced: boolean;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -16,6 +18,41 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 const DB_NAME = 'bayu_portfolio_db';
 const STORE_NAME = 'projects_store';
 const STORAGE_KEY = 'bayu_portfolio_projects';
+
+// Helper mapping Supabase row to Project
+function mapRowToProject(row: any): Project {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    categoryLabel: row.category_label || row.categoryLabel || 'Portfolio Project',
+    client: row.client || 'Mercure Karawang',
+    description: row.description || '',
+    image: row.image,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    featured: Boolean(row.featured),
+    inSelectedWorks: Boolean(row.in_selected_works ?? row.inSelectedWorks),
+    aspectRatio: row.aspect_ratio || row.aspectRatio || 'portrait',
+    details: row.details || {}
+  };
+}
+
+// Helper mapping Project to Supabase row
+function mapProjectToRow(proj: Partial<Project> & { id: string }) {
+  const row: any = { id: proj.id };
+  if (proj.title !== undefined) row.title = proj.title;
+  if (proj.category !== undefined) row.category = proj.category;
+  if (proj.categoryLabel !== undefined) row.category_label = proj.categoryLabel;
+  if (proj.client !== undefined) row.client = proj.client;
+  if (proj.description !== undefined) row.description = proj.description;
+  if (proj.image !== undefined) row.image = proj.image;
+  if (proj.tags !== undefined) row.tags = proj.tags;
+  if (proj.featured !== undefined) row.featured = proj.featured;
+  if (proj.inSelectedWorks !== undefined) row.in_selected_works = proj.inSelectedWorks;
+  if (proj.aspectRatio !== undefined) row.aspect_ratio = proj.aspectRatio;
+  if (proj.details !== undefined) row.details = proj.details;
+  return row;
+}
 
 // Helper to open IndexedDB
 function openDB(): Promise<IDBDatabase> {
@@ -36,7 +73,6 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-// Helper to save to IndexedDB with localStorage dual persistence
 async function saveProjectsToDB(projects: Project[]): Promise<boolean> {
   return new Promise((resolve) => {
     openDB()
@@ -48,7 +84,7 @@ async function saveProjectsToDB(projects: Project[]): Promise<boolean> {
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
           } catch {
-            // LocalStorage might be full for large base64s, but IndexedDB succeeded
+            // Ignored
           }
           resolve(true);
         };
@@ -57,7 +93,6 @@ async function saveProjectsToDB(projects: Project[]): Promise<boolean> {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
             resolve(true);
           } catch {
-            console.warn('Storage quota exceeded on both IndexedDB and localStorage');
             resolve(false);
           }
         };
@@ -67,14 +102,12 @@ async function saveProjectsToDB(projects: Project[]): Promise<boolean> {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
           resolve(true);
         } catch {
-          console.warn('Storage quota exceeded on fallback localStorage');
           resolve(false);
         }
       });
   });
 }
 
-// Helper to load from IndexedDB
 async function loadProjectsFromDB(): Promise<Project[] | null> {
   try {
     const db = await openDB();
@@ -116,40 +149,95 @@ async function loadProjectsFromDB(): Promise<Project[] | null> {
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCloudSynced, setIsCloudSynced] = useState(false);
 
-  // Load from IndexedDB / localStorage on mount
+  // Load from Supabase (if configured) or local DB
   useEffect(() => {
-    loadProjectsFromDB().then((saved) => {
-      if (saved && Array.isArray(saved) && saved.length > 0) {
-        setProjects(saved);
+    async function loadData() {
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            const mapped = data.map(mapRowToProject);
+            setProjects(mapped);
+            setIsCloudSynced(true);
+            setIsLoaded(true);
+            return;
+          }
+        } catch (e) {
+          console.warn('Supabase load error, fallback to local DB:', e);
+        }
       }
-      setIsLoaded(true);
-    });
+
+      // Local fallback
+      loadProjectsFromDB().then((saved) => {
+        if (saved && Array.isArray(saved) && saved.length > 0) {
+          setProjects(saved);
+        }
+        setIsLoaded(true);
+      });
+    }
+
+    loadData();
   }, []);
 
-  // Save to IndexedDB on projects change
+  // Save to Local DB when updated
   useEffect(() => {
     if (isLoaded) {
       saveProjectsToDB(projects);
     }
   }, [projects, isLoaded]);
 
-  const addProject = (newProj: Omit<Project, 'id'>) => {
+  const addProject = async (newProj: Omit<Project, 'id'>) => {
     const projectWithId: Project = {
       ...newProj,
       id: `proj-${Date.now()}`
     };
+
     setProjects((prev) => [projectWithId, ...prev]);
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const row = mapProjectToRow(projectWithId);
+        const { error } = await supabase.from('projects').insert([row]);
+        if (error) console.error('Error inserting project to Supabase:', error);
+      } catch (err) {
+        console.error('Supabase add error:', err);
+      }
+    }
   };
 
-  const updateProject = (id: string, updatedFields: Partial<Project>) => {
+  const updateProject = async (id: string, updatedFields: Partial<Project>) => {
     setProjects((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
     );
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const row = mapProjectToRow({ id, ...updatedFields });
+        const { error } = await supabase.from('projects').update(row).eq('id', id);
+        if (error) console.error('Error updating project in Supabase:', error);
+      } catch (err) {
+        console.error('Supabase update error:', err);
+      }
+    }
   };
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     setProjects((prev) => prev.filter((item) => item.id !== id));
+
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { error } = await supabase.from('projects').delete().eq('id', id);
+        if (error) console.error('Error deleting project from Supabase:', error);
+      } catch (err) {
+        console.error('Supabase delete error:', err);
+      }
+    }
   };
 
   const resetToDefault = () => {
@@ -161,7 +249,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         tx.objectStore(STORE_NAME).clear();
       });
     } catch {
-      console.warn('Failed to clear DB');
+      console.warn('Failed to clear local DB');
     }
   };
 
@@ -172,7 +260,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         addProject,
         updateProject,
         deleteProject,
-        resetToDefault
+        resetToDefault,
+        isCloudSynced
       }}
     >
       {children}
